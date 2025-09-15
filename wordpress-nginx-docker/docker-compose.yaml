@@ -1,0 +1,68 @@
+version: '3.5'
+services:
+  web:
+    container_name: webserver
+    image: 'nginx:1.28-alpine3.21'
+    restart: always
+    depends_on:
+      - db
+      - wordpress
+    ports:
+      - '81:80'
+    networks:
+      - wp_site
+    volumes:
+      - './nginx:/etc/nginx/conf.d'
+      - 'wp_data:/var/www/html'
+  db:
+    container_name: database
+    image: 'mariadb:12.0-noble'
+    volumes:
+      - 'db_data:/var/lib/mysql'
+    networks:
+      - wp_site
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: password1234
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: 1234pass
+  wordpress:
+    container_name: wordpress
+    image: 'wordpress:php8.2-fpm-alpine'
+    depends_on:
+      - db
+    networks:
+      - wp_site
+    volumes:
+      - type: bind
+        source: ./wp_site
+        target: /var/www/html/wp-content
+      - type: volume
+        source: wp_data
+        target: /var/www/html
+    restart: always
+    environment:
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: 1234pass
+      WORDPRESS_DB_HOST: 'db:3306'
+      WORDPRESS_DB_NAME: wordpress
+  adminer:
+    container_name: dbadmin
+    image: 'adminer:5.4.0-standalone'
+    depends_on:
+      - db
+    ports:
+      - '8088:8080'
+    networks:
+      - wp_site
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: password1234
+networks:
+  wp_site: 
+volumes:
+  db_data: {}
+  wp_data: {}
+
